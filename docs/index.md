@@ -35,10 +35,10 @@ What this library does NOT provide:
 sudo apt-get install -y libglm-dev libglfw3-dev libpng-dev libjpeg-dev libeigen3-dev
 
 # Build and install Iridescence
-git clone https://github.com/koide3/iridescence --recursive
+git clone https://github.com/koide3/iridescence
 mkdir iridescence/build && cd iridescence/build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make -j$(nproc)
+cmake ..
+make -j
 sudo make install
 
 # [Optional] Build and install python bindings

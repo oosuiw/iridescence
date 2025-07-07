@@ -495,9 +495,17 @@ bool save_ply_binary(const std::string& filename, const PLYData& ply) {
 template <typename T, int D>
 bool save_ply_binary(const std::string& filename, const Eigen::Matrix<T, D, 1>* points, int num_points) {
   PLYData ply;
+  std::cout << "D = " << D << std::endl;
   ply.vertices.resize(num_points);
+  ply.intensities.resize(num_points);
   for (int i = 0; i < num_points; i++) {
     ply.vertices[i] = points[i].template head<3>().template cast<float>();
+    std::cout << "Intensity at point " << i << ": " << points[i][3] << std::endl;
+    if constexpr (D >= 4) {
+      ply.intensities[i] = static_cast<float>(points[i][3]);
+    } else {
+      ply.intensities[i] = 0.0f;
+    }
   }
 
   return save_ply_binary(filename, ply);

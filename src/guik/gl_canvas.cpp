@@ -76,7 +76,6 @@ GLCanvas::GLCanvas(const Eigen::Vector2i& size, const std::string& shader_name, 
   normal_buffer_id = info_buffer_id = dynamic_flag_buffer_id = 0;
   last_projection_view_matrix.setIdentity();
 
-  is_partial_rendering_enabled = false;
   clear_partial_rendering_flag = false;
   partial_rendering_clear_thresh = 1e-6;
 
@@ -170,13 +169,7 @@ void GLCanvas::enable_info_buffer() {
 }
 
 void GLCanvas::enable_partial_rendering(double clear_thresh) {
-  is_partial_rendering_enabled = true;
   partial_rendering_clear_thresh = clear_thresh;
-
-  if (dynamic_flag_buffer_id > 0) {
-    return;
-  }
-
   dynamic_flag_buffer_id = frame_buffer->num_color_buffers();
   frame_buffer->add_color_buffer(3, GL_R8UI, GL_RED_INTEGER, GL_UNSIGNED_BYTE);
 
@@ -185,10 +178,6 @@ void GLCanvas::enable_partial_rendering(double clear_thresh) {
   if (!partial_clear_shader->init(data_path + "/shader/texture.vert", data_path + "/shader/partial_clear.frag")) {
     partial_clear_shader.reset();
   }
-}
-
-void GLCanvas::disable_partial_rendering() {
-  is_partial_rendering_enabled = false;
 }
 
 void GLCanvas::clear_partial_rendering() {
@@ -204,7 +193,7 @@ bool GLCanvas::info_buffer_enabled() const {
 }
 
 bool GLCanvas::partial_rendering_enabled() const {
-  return is_partial_rendering_enabled;
+  return dynamic_flag_buffer_id > 0;
 }
 
 const glk::Texture& GLCanvas::color_buffer() const {
@@ -268,7 +257,7 @@ void GLCanvas::bind() {
   Eigen::Matrix4f projection_matrix = projection_control->projection_matrix();
 
   bool clear_buffer = true;
-  if (is_partial_rendering_enabled) {
+  if (partial_rendering_enabled()) {
     Eigen::Matrix4f projection_view_matrix = projection_matrix * view_matrix;
     clear_buffer = (last_projection_view_matrix - projection_view_matrix).norm() > partial_rendering_clear_thresh || clear_partial_rendering_flag;
     clear_partial_rendering_flag = false;
@@ -289,7 +278,7 @@ void GLCanvas::bind() {
   shader->set_uniform("projection_matrix", projection_matrix);
   shader->set_uniform("info_enabled", info_buffer_id > 0);
   shader->set_uniform("normal_enabled", normal_buffer_id > 0);
-  shader->set_uniform("partial_rendering_enabled", is_partial_rendering_enabled);
+  shader->set_uniform("partial_rendering_enabled", dynamic_flag_buffer_id > 0);
 
   shader->set_uniform("colormap_sampler", 0);
   shader->set_uniform("texture_sampler", 1);
@@ -323,7 +312,7 @@ void GLCanvas::bind() {
       shader->set_uniform("info_values", Eigen::Vector4i(-1, -1, -1, -1));
     }
 
-    if (is_partial_rendering_enabled) {
+    if (dynamic_flag_buffer_id) {
       GLint clear_color[] = {255, 255, 255, 255};
       glClearTexImage(frame_buffer->color(dynamic_flag_buffer_id).id(), 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, clear_color);
       shader->set_uniform("dynamic_object", 255);
@@ -402,7 +391,7 @@ void GLCanvas::bind_second() {
     shader->set_uniform("info_values", Eigen::Vector4i(-1, -1, -1, -1));
   }
 
-  if (is_partial_rendering_enabled) {
+  if (dynamic_flag_buffer_id) {
     shader->set_uniform("dynamic_object", 255);
   }
 
